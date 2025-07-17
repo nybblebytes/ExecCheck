@@ -1,9 +1,0 @@
-{
-  "1": "fScanMigrated",
-  "4": "fScanUserApproved",
-  "8": "fScanUserOverride",
-  "16": "fScanPackage",
-  "64": "fScanDeveloperOverride",
-  "512": "fScanSuccessfulEvaluation",
-  "1024": "fScanBlockedOverride"
-}
