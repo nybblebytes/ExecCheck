@@ -137,6 +137,18 @@ python3 -m execcheck \
 
 ---
 
+## 🧪 Running Tests
+
+Run the unit tests with `pytest`:
+
+```bash
+pytest
+```
+
+Additional tests may be added to cover other modules.
+
+---
+
 ## 📦 Coming Soon
 
 - HTML report viewer (optional)
