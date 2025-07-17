@@ -68,12 +68,23 @@ pip install -r requirements.txt
 
 Binaries are scored based on:
 
-- Unsigned status
-- Missing or untrusted team ID
-- Gatekeeper override flags
-- Revoked or weak certificates
-- Malicious VT results (optional)
-- External volume origin
+- **Unsigned status** — unsigned executables may be ad-hoc or tampered with and
+  bypass Apple’s notarization pipeline.
+- **Missing or untrusted team ID** — binaries without a trusted team
+  identifier often originate from unknown developers.
+- **Gatekeeper override flags** — indicates a user or policy has explicitly
+  bypassed Gatekeeper protections.
+- **Revoked or weak certificates** — code signing certificates revoked by Apple
+  or using insecure algorithms are suspicious.
+- **Malicious VT results (optional)** — hashes are looked up against
+  VirusTotal to see if prior analysis flagged them as malware. Lookups rely on
+  the `vt_api_key` you provide in the configuration and respect API rate limits
+  by pausing 15 seconds between requests (see `vt.py`).
+- **External volume origin** — executables launched from removable or
+  network volumes may evade standard quarantine workflows.
+- **Custom flag masks** — user-supplied bitmasks can assign scores to unusual
+  policy flags, helping surface tampering or overrides that aren’t covered by
+  the default rules.
 
 Each record receives:
 - `risk_score`: numerical severity
