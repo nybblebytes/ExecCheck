@@ -52,6 +52,16 @@ macOS does not allow live access to the ExecPolicy DB while it is in use by `sys
 
 ---
 
+## Installation
+
+Ensure Python 3 is available and install the required packages:
+
+```bash
+pip install -r requirements.txt
+```
+
+---
+
 ## ✨ Features
 
 ### ✔️ Risk-Based Scoring
