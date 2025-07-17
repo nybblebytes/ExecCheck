@@ -1,0 +1,20 @@
+# Python artifacts
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+
+# Virtual Environments
+venv/
+.venv/
+env/
+.virtualenv/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Logs and debug files
+*.log
+*.swp

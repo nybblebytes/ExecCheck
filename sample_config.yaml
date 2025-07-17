@@ -1,0 +1,26 @@
+# Uncomment and set your VirusTotal API key to enable VT lookups
+# vt_api_key: "YOUR_API_KEY"
+
+scoring:
+  unsigned: 5                     # Score if binary is not signed
+  missing_team_id: 3             # Score if team_id is missing
+  override_blocked: 7            # Score if explicitly blocked by override policy
+  vt_malicious: 10               # Score if VirusTotal classifies as malicious
+  custom_flag_mask:
+    0x2000: 4                    # Custom score for specific scan flags
+    0x800: 2
+
+whitelist:
+  hashes: []                     # List of known-safe cdhashes
+  team_ids: []                   # List of trusted team identifiers
+  paths: []                      # File paths considered safe
+
+output:
+  min_score: 5                   # Minimum score for display/export
+  filters:
+    team_id_missing: true        # Include if missing team_id
+    blocked: true                # Include if explicitly blocked
+
+color_thresholds:
+  yellow: 5                      # Risk scores ≥ 5 display in yellow
+  red: 10                        # Risk scores ≥ 10 display in red
