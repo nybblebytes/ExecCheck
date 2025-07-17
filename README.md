@@ -113,15 +113,18 @@ ExecCheck supports:
 --output-format [table|csv|json|ndjson]
 ```
 
-
 ## 🔄 Automate Your Workflow
 
 You can integrate ExecCheck into your triage pipeline:
+>>>>>>> main
 
 ```bash
 python3 -m execcheck \
   --db ./ExecPolicy \
   --config sample_config.yaml \
+  --vt \
+  --output-format json \
+  --output-path exec_results.json
   --ioc ./ioc_hits.txt \
   --only-ioc-matches \
   --output-format ndjson \
@@ -135,22 +138,3 @@ python3 -m execcheck \
 - `sample_config.yaml` — scoring weights and settings
 - `ExecPolicy` DB — must be extracted from disk image or mounted target
 
----
-
-## 📦 Coming Soon
-
-- HTML report viewer (optional)
-- System UUID correlation
-- Live agent/collection support (limited)
-
----
-
-## 👤 Author & Credits
-
-ExecCheck was developed to support real-world DFIR workflows with explainability and accuracy in mind.
-
-Inspired by the work of:
-- Patrick Wardle (macOS transparency pioneer)
-- Countless incident responders doing forensic triage by hand
-
-Contributions welcome.
