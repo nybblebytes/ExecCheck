@@ -52,6 +52,16 @@ macOS does not allow live access to the ExecPolicy DB while it is in use by `sys
 
 ---
 
+## Installation
+
+Ensure Python 3 is available and install the required packages:
+
+```bash
+pip install -r requirements.txt
+```
+
+---
+
 ## ✨ Features
 
 ### ✔️ Risk-Based Scoring
@@ -103,23 +113,6 @@ ExecCheck supports:
 --output-format [table|csv|json|ndjson]
 ```
 
-### ✔️ Filtering
-
-Filter records using:
-
-```bash
---filter risk_score ">=25"
---filter is_signed false
---filter team_identifier !apple
---filter bundle_id .lulu.
-```
-
-- Case-insensitive
-- Supports numeric comparisons
-- Supports substring or negation
-
----
-
 ## 🔄 Automate Your Workflow
 
 You can integrate ExecCheck into your triage pipeline:
@@ -128,7 +121,9 @@ You can integrate ExecCheck into your triage pipeline:
 python3 -m execcheck \
   --db ./ExecPolicy \
   --config sample_config.yaml \
-  --filter risk_score ">=25" \
+  --vt \
+  --output-format json \
+  --output-path exec_results.json
   --ioc ./ioc_hits.txt \
   --only-ioc-matches \
   --output-format ndjson \
@@ -142,22 +137,3 @@ python3 -m execcheck \
 - `sample_config.yaml` — scoring weights and settings
 - `ExecPolicy` DB — must be extracted from disk image or mounted target
 
----
-
-## 📦 Coming Soon
-
-- HTML report viewer (optional)
-- System UUID correlation
-- Live agent/collection support (limited)
-
----
-
-## 👤 Author & Credits
-
-ExecCheck was developed to support real-world DFIR workflows with explainability and accuracy in mind.
-
-Inspired by the work of:
-- Patrick Wardle (macOS transparency pioneer)
-- Countless incident responders doing forensic triage by hand
-
-Contributions welcome.
