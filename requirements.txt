@@ -1,4 +1,4 @@
-pyyaml
+pydantic
+PyYAML
 requests
 rich
-pydantic
