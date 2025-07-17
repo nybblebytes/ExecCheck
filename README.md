@@ -116,7 +116,6 @@ ExecCheck supports:
 ## 🔄 Automate Your Workflow
 
 You can integrate ExecCheck into your triage pipeline:
->>>>>>> main
 
 ```bash
 python3 -m execcheck \
