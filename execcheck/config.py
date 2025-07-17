@@ -1,6 +1,13 @@
 from pydantic import BaseModel, Field
-import yaml
 from typing import Optional
+
+try:
+    import yaml
+except ImportError as exc:
+    raise ImportError(
+        "PyYAML is required for loading configuration files. "
+        "Install it with 'pip install pyyaml'."
+    ) from exc
 
 class ScoringWeights(BaseModel):
     unsigned: int

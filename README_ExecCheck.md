@@ -52,6 +52,16 @@ macOS does not allow live access to the ExecPolicy DB while it is in use by `sys
 
 ---
 
+## Installation
+
+Ensure Python 3 is available and install the required packages:
+
+```bash
+pip install -r requirements.txt
+```
+
+---
+
 ## ✨ Features
 
 ### ✔️ Risk-Based Scoring
@@ -103,22 +113,6 @@ ExecCheck supports:
 --output-format [table|csv|json|ndjson]
 ```
 
-### ✔️ Filtering
-
-Filter records using:
-
-```bash
---filter risk_score ">=25"
---filter is_signed false
---filter team_identifier !apple
---filter bundle_id .lulu.
-```
-
-- Case-insensitive
-- Supports numeric comparisons
-- Supports substring or negation
-
----
 
 ## 🔄 Automate Your Workflow
 
@@ -128,7 +122,6 @@ You can integrate ExecCheck into your triage pipeline:
 python3 -m execcheck \
   --db ./ExecPolicy \
   --config sample_config.yaml \
-  --filter risk_score ">=25" \
   --ioc ./ioc_hits.txt \
   --only-ioc-matches \
   --output-format ndjson \
