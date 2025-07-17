@@ -15,7 +15,11 @@ def score_entry(entry, config):
         trace.append(f"missing_team_id (+{scoring.missing_team_id})")
 
     # Score: override_blocked
-    if entry.get("policy_match_label") == "Override: Block" and scoring.override_blocked:
+    policy_label = entry.get("policy_match_label")
+    policy_code = entry.get("policy_match")
+    if (
+        policy_label in {"Override", "Override: Block"} or policy_code == 3
+    ) and scoring.override_blocked:
         score += scoring.override_blocked
         trace.append(f"override_blocked (+{scoring.override_blocked})")
 
