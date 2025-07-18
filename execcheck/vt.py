@@ -1,7 +1,11 @@
+"""Simple VirusTotal lookups for hash enrichment."""
+
 import time
 import requests
 
-def query_vt(hash_list, api_key):
+def query_vt(hash_list: list[str], api_key: str) -> dict:
+    """Return VirusTotal results for each hash in ``hash_list``."""
+
     headers = {"x-apikey": api_key}
     results = {}
     for h in hash_list:

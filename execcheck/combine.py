@@ -1,12 +1,17 @@
+"""Merge data from ExecPolicy tables into unified records."""
+
 import sqlite3
 from collections import defaultdict
 
-def combine_exec_policy_tables(db_path):
+
+def combine_exec_policy_tables(db_path: str) -> list[dict]:
+    """Return correlated ExecPolicy rows from the given SQLite database."""
+
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
-    # Load all three tables fully
-    def load_table(query):
+    def load_table(query: str) -> list[dict]:
+        """Fetch an entire table and return rows as dictionaries."""
         cursor.execute(query)
         return [dict(zip([col[0] for col in cursor.description], row)) for row in cursor.fetchall()]
 
@@ -16,7 +21,6 @@ def combine_exec_policy_tables(db_path):
 
     conn.close()
 
-    # Index by cdhash and file_identifier
     exec_index = defaultdict(list)
     scan_index = defaultdict(list)
     prov_index = defaultdict(list)
@@ -45,7 +49,6 @@ def combine_exec_policy_tables(db_path):
         if fid:
             prov_index[fid].append(row)
 
-    # Build union of all known cdhashes or file_identifiers
     all_keys = set(exec_index.keys()) | set(scan_index.keys()) | set(prov_index.keys())
     combined_rows = []
 
@@ -60,10 +63,8 @@ def combine_exec_policy_tables(db_path):
 
         row = {}
 
-        # Copy from base executable
         row.update(base)
 
-        # Add enrichment
         row["scan_flags"] = scan.get("flags")
         row["malware_result"] = scan.get("malware_result")
         row["policy_match"] = scan.get("policy_match")
@@ -74,7 +75,6 @@ def combine_exec_policy_tables(db_path):
         row["provenance_flags"] = prov.get("flags")
         row["provenance_timestamp"] = prov.get("timestamp")
 
-        # Correlation metadata
         row["correlation_type"] = (
             "strong" if execs and scans else
             "weak" if scans or provs else

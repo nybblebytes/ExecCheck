@@ -1,3 +1,5 @@
+"""Output helpers for printing ExecCheck results."""
+
 import json
 import csv
 import re
@@ -6,7 +8,7 @@ from rich.table import Table
 from rich.console import Console
 from rich import box
 
-# Columns shown in table output (terminal only)
+# Columns shown when rendering a table in the terminal
 column_order = [
     'risk_score',
     'score_trace',
@@ -15,15 +17,18 @@ column_order = [
     'origin_url',
 ]
 
-def is_styled_rich(val):
-    """Check if a string already includes rich formatting."""
+def is_styled_rich(val: str) -> bool:
+    """Return ``True`` if ``val`` already contains Rich markup."""
     return isinstance(val, str) and re.search(r"\[[a-zA-Z_]+\]", val)
 
-def truncate(val, width=50):
+def truncate(val: str, width: int = 50) -> str:
+    """Trim long values for table display."""
     val = str(val)
-    return val if len(val) <= width else val[:width - 3] + "..."
+    return val if len(val) <= width else val[: width - 3] + "..."
 
-def output_table(data, config=None):
+def output_table(data: list[dict], config: dict | None = None) -> None:
+    """Render records as a color-coded table using Rich."""
+
     if not data:
         print("No data to display.")
         return
@@ -81,16 +86,19 @@ def output_table(data, config=None):
     console.print(table)
 
 
-def output_json(data, path):
+def output_json(data: list[dict], path: str) -> None:
+    """Write results to ``path`` in JSON format."""
     with open(path, "w") as f:
         json.dump(data, f, indent=2)
 
-def output_ndjson(data, path):
+def output_ndjson(data: list[dict], path: str) -> None:
+    """Write newline-delimited JSON to ``path``."""
     with open(path, "w", encoding="utf-8") as f:
         for row in data:
             f.write(json.dumps(row, separators=(",", ":")) + "\n")
 
-def output_csv(data, path):
+def output_csv(data: list[dict], path: str) -> None:
+    """Save results as a CSV file."""
     if not data:
         print("No data to write.")
         return

@@ -1,4 +1,8 @@
-def score_entry(entry, config):
+"""Risk scoring rules for ExecCheck entries."""
+
+
+def score_entry(entry: dict, config) -> tuple[int, list[str]]:
+    """Calculate a risk score and trace for a single record."""
     score = 0
     trace = []
 

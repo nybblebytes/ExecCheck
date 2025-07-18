@@ -1,6 +1,11 @@
+"""Low-level parser for the executable_measurements_v2 table."""
+
 import sqlite3
 
-def parse_exec_policy(db_path):
+
+def parse_exec_policy(db_path: str) -> list[dict]:
+    """Parse the ExecPolicy database and return raw measurement rows."""
+
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 

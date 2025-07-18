@@ -1,3 +1,28 @@
+import os
+import sys
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+from execcheck.scorer import score_entry
+from execcheck.config import Config, ScoringWeights, Whitelist, OutputConfig
+
+
+def make_config():
+    """Create a minimal configuration object for tests."""
+    return Config(
+        vt_api_key=None,
+        scoring=ScoringWeights(
+            unsigned=5,
+            missing_team_id=3,
+            override_blocked=7,
+            vt_malicious=10,
+            custom_flag_mask={0x2000: 4, 0x800: 2},
+        ),
+        whitelist=Whitelist(hashes=[], team_ids=[], paths=[]),
+        output=OutputConfig(min_score=5, filters={"team_id_missing": True, "blocked": True}),
+    )
+
+
 def test_score_entry_override_blocked():
     cfg = make_config()
     entry = {

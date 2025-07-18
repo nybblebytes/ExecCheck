@@ -1,3 +1,5 @@
+"""Command-line interface for running ExecCheck."""
+
 import argparse
 from .combine import combine_exec_policy_tables
 from .scorer import score_entry
@@ -11,7 +13,10 @@ from .translate import (
 )
 from .utils.time import to_iso8601
 
-def load_iocs(path):
+
+def load_iocs(path: str) -> set[str]:
+    """Load indicators of compromise from ``path``."""
+
     iocs = set()
     with open(path, "r") as f:
         for line in f:
@@ -20,7 +25,9 @@ def load_iocs(path):
                 iocs.add(val)
     return iocs
 
-def match_iocs(row, ioc_set):
+def match_iocs(row: dict, ioc_set: set[str]) -> list[str]:
+    """Return a list of fields in ``row`` that matched the IOC set."""
+
     matched = []
     for k, v in row.items():
         if v is None:
@@ -35,7 +42,8 @@ def match_iocs(row, ioc_set):
                 matched.append(k)
     return matched
 
-def main():
+def main() -> None:
+    """Entry point for the ``execcheck`` command."""
     parser = argparse.ArgumentParser(description="ExecCheck with IOC support")
     parser.add_argument("--db", required=True)
     parser.add_argument("--config", required=True)
