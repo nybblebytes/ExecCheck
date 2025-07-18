@@ -1,13 +1,7 @@
-from pydantic import BaseModel, Field
-from typing import Optional
+"""Configuration dataclasses and loader for ExecCheck."""
 
-try:
-    import yaml
-except ImportError as exc:
-    raise ImportError(
-        "PyYAML is required for loading configuration files. "
-        "Install it with 'pip install pyyaml'."
-    ) from exc
+from pydantic import BaseModel
+from typing import Optional
 
 class ScoringWeights(BaseModel):
     unsigned: int
@@ -32,6 +26,15 @@ class Config(BaseModel):
     output: OutputConfig
 
 def load_config(path: str) -> Config:
+    """Load a YAML configuration file into a :class:`Config` object."""
+    try:
+        import yaml
+    except ImportError as exc:
+        raise ImportError(
+            "PyYAML is required for loading configuration files. "
+            "Install it with 'pip install pyyaml'."
+        ) from exc
+
     with open(path, "r") as f:
         raw = yaml.safe_load(f)
     return Config(**raw)

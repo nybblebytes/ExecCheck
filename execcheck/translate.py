@@ -1,4 +1,8 @@
-def translate_malware_result(val):
+"""Utility functions to translate numeric codes into human labels."""
+
+
+def translate_malware_result(val: int) -> str:
+    """Return a human readable label for a malware result code."""
     mapping = {
         0: "No matching policy",
         1: "Signed by Apple",
@@ -13,7 +17,8 @@ def translate_malware_result(val):
     }
     return mapping.get(val, "Unknown")
 
-def translate_policy_match(val):
+def translate_policy_match(val: int) -> str:
+    """Return a label for a policy match value."""
     mapping = {
         0: "No Match",
         1: "Allow",
@@ -26,7 +31,8 @@ def translate_policy_match(val):
     }
     return mapping.get(val, "Unmapped")
 
-def decode_flags(flag_value):
+def decode_flags(flag_value: int | None) -> list[str] | str:
+    """Decode bitmask ``flag_value`` into a list of flag names."""
     if flag_value is None:
         return "missing"
     if flag_value == 0:

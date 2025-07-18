@@ -1,6 +1,11 @@
+"""Correlation helpers for scan and provenance tables."""
+
 import sqlite3
 
-def correlate_exec_data(db_path):
+
+def correlate_exec_data(db_path: str) -> tuple[dict, dict]:
+    """Return scan and provenance data indexed by cdhash."""
+
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 

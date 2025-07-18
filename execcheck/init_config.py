@@ -1,4 +1,9 @@
-def write_default_config():
+"""Utility for generating a sample configuration file."""
+
+
+def write_default_config() -> None:
+    """Write ``sample_config.yaml`` to the current directory."""
+
     sample = """# Default ExecCheck config
 vt_api_key: "YOUR_API_KEY"
 scoring:
