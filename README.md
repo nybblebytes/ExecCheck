@@ -66,7 +66,7 @@ This tool is a POC intended to enable others to explore and streamline workflows
 - Auto mapping to known flags and auto time conversion to human readable (iso)
 
 ---
-Integration Use Cases
+## Integration Use Cases
 
 **ExecCheck** is designed for flexible deployment:
 - Hunt Operations: Feed NDJSON into Splunk or Elastic with minimal parsing.
@@ -79,7 +79,7 @@ Integration Use Cases
 ## Getting Started
 ```bash
 # Downloading
-ppy
+git clone git@github.com/nybblebytes/ExecCheck.git
 cd /path/to/ExecCheck
 
 # Setting up enviroment using Python 3.9 to 3.11
