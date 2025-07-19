@@ -45,15 +45,48 @@ def match_iocs(row: dict, ioc_set: set[str]) -> list[str]:
 def main() -> None:
     """Entry point for the ``execcheck`` command."""
     parser = argparse.ArgumentParser(description="ExecCheck with IOC support")
-    parser.add_argument("--db", required=True)
-    parser.add_argument("--config", required=True)
-    parser.add_argument("--output-format", choices=["table", "csv", "json", "ndjson"], default="table")
-    parser.add_argument("--output-path", required=False)
-    parser.add_argument("--ioc", help="Path to file with IOCs (one per line)")
-    parser.add_argument("--only-ioc-matches", action="store_true")
-    parser.add_argument("--vt", action="store_true", help="Enable VirusTotal enrichment")
-    parser.add_argument("risk_level", nargs="?", choices=["low", "med", "high", "all"], default="all", help="Optional: Filter table output by risk level (low, med, high)"
-)
+    parser.add_argument(
+        "--db",
+        required=True,
+        help="Path to the extracted ExecPolicy SQLite database",
+    )
+    parser.add_argument(
+        "--config",
+        required=True,
+        help="Path to YAML configuration file (scoring and output settings)",
+    )
+    parser.add_argument(
+        "--output-format",
+        choices=["table", "csv", "json", "ndjson"],
+        default="table",
+        help="Output format for results",
+    )
+    parser.add_argument(
+        "--output-path",
+        required=False,
+        help="Optional path to write output (defaults to stdout)",
+    )
+    parser.add_argument(
+        "--ioc",
+        help="File containing one IOC per line to match against results",
+    )
+    parser.add_argument(
+        "--only-ioc-matches",
+        action="store_true",
+        help="Only include records that matched provided IOCs",
+    )
+    parser.add_argument(
+        "--vt",
+        action="store_true",
+        help="Query VirusTotal using the API key defined in the config",
+    )
+    parser.add_argument(
+        "risk_level",
+        nargs="?",
+        choices=["low", "med", "high", "all"],
+        default="all",
+        help="Filter table output by risk level when using table format",
+    )
     args = parser.parse_args()
 
     config = load_config(args.config)
