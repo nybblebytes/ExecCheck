@@ -2,11 +2,15 @@
 
 **ExecCheck** is a macOS forensic analysis tool designed to parse, score, correlate, and triage data from the `ExecPolicy` database (`/var/db/SystemPolicyConfiguration/ExecPolicy`). It enables security teams and investigators to extract actionable intelligence from Gatekeeper and system policy telemetry.
 
+This tool is a POC intended to enable others to explore and streamline workflows.
+
+⚠️ Important: ExecPolicy data is protected by SIP and can not be queried live therefore ExecCheck is an offline analyzer; it can not access the db on a live system, you need to either make a copy or run it against a mounted volume. With FullDiskAccess (FDA), you can sudo cp /private/var/db/SystemPolicyConfiguration/ExecPolicy /path/to/destination/ExecPolicy* (do not forget the shm and wal) or in an enterprise scenario you can use your MDM or EDR (with proper entitlements)
+
 ---
 
-## 🔍 What It’s For
+## Tool Overview
 
-ExecCheck helps DFIR analysts and enterprise defenders:
+**ExecCheck** helps investigators and enterprise defenders:
 
 - Investigate application and binary execution metadata
 - Detect suspicious, unsigned, or quarantined files
@@ -15,125 +19,90 @@ ExecCheck helps DFIR analysts and enterprise defenders:
 - Cross-reference against new threat intel (IOC matching)
 - Export triage-ready results for incident response or SIEM ingestion
 
+**ExecCheck** automatically parses and correlates (from cdhash) records from:
+
+- executable_measurements_v2
+- policy_scan_cache
+- provenance_tracking
+
+**ExecCheck** supports:
+
+- Risk scoring logic (customizable heuristics via yaml config file). Each record gets a risk_score (numerical severity) and score_trace (which rules and why)
+  - Unsigned status
+  - Missing or untrusted team ID
+  - Gatekeeper override flags
+  - Revoked or weak certificates
+  - Malicious VT results (optional)
+  - External volume origin
+
+- Feeding threat intel to scan for known indicators (via --ioc ioc.txt)
+  - Simple list of IOCs (one per line)
+  - Matches across all fields
+  - Tracks which fields matched per record
+
+- VirusTotal hash enrichment (via --vt). Remember that what you upload is public unless you have an enterprise license.
+  - add API key to config.yaml
+  - will send all executable hashes (sha256), fetch the results and factor results as risk weights
+
+- Customization through a YAML config file
+  - customize scoring based on database fields
+  - allowlist of hashes, team ids, and paths
+  - customize output filters
+  - customize color thresholds
+
+- Output formats: CSV, JSON, NDJSON, rich terminal
+  - terminal table
+    - output in terminal in rich table view
+    - choose which risk category you want to view or all of them
+    - table is limited to only risk_score, score_trace (reason for risk score), file_identifier, responsible_file_identifier, and origin_url
+    - customize to your own needs
+  - csv
+    - full parsing, scoring, collated tables as csv (for humans)
+  - json
+    - full parsing, scoring, collated tables as json (for machines)
+  - ndjson
+    - full parsing, scoring, collated tables as ndjson (for SIEM)
+
+- Auto mapping to known flags and auto time conversion to human readable (iso)
+
 ---
+Integration Use Cases
 
-## 🛠 What It Parses
+**ExecCheck** is designed for flexible deployment:
+- Hunt Operations: Feed NDJSON into Splunk or Elastic with minimal parsing.
+- Threat Intel / IOC Matching: Check against known indicators during investigations (ingestion) or feeding ExecCheck's ndjson outputs to SIEM or both.
+- Incident Response: Suspicious executable.
+- Historical Analysis: Determine if an executable was presence on disk or possible executed.
 
-The following tables are parsed and merged from the `ExecPolicy` SQLite database:
+⚠️ Important: Always validate results using additional context—ExecCheck scores and correlations are designed to prioritize review, not replace human judgment.
 
-- `executable_measurements_v2`
-- `policy_scan_cache`
-- `provenance_tracking`
-- `legacy_exec_history_v4` (if present)
-
-Merging is keyed on `cdhash`, with weak fallback support using `file_identifier`.
-
----
-
-## 🚫 Cannot Run on Live Systems
-
-**ExecCheck is read-only and designed for offline analysis.**
-
-macOS does not allow live access to the ExecPolicy DB while it is in use by `syspolicyd`.
-
-### ✅ How to Acquire the Database
-
-1. Boot the target Mac into Recovery Mode or use Target Disk Mode
-2. Mount the volume externally (e.g., `/Volumes/Macintosh HD`)
-3. Copy the following files from the system volume:
-
+## Getting Started
 ```bash
-/var/db/SystemPolicyConfiguration/ExecPolicy
-/var/db/SystemPolicyConfiguration/ExecPolicy-shm
-/var/db/SystemPolicyConfiguration/ExecPolicy-wal
-```
+# Downloading
+ppy
+cd /path/to/ExecCheck
 
-4. Provide the path to `ExecPolicy` using the `--db` argument
+# Setting up enviroment using Python 3.9 to 3.11
+python3 -m venv venv
+source venv/bin/activate
 
----
-
-## Installation
-
-Ensure Python 3 is available and install the required packages:
-
-```bash
+# Install dependencies
 pip install -r requirements.txt
 ```
-
----
-
-## ✨ Features
-
-### ✔️ Risk-Based Scoring
-
-Binaries are scored based on:
-
-- Unsigned status
-- Missing or untrusted team ID
-- Gatekeeper override flags
-- Revoked or weak certificates
-- Malicious VT results (optional)
-- External volume origin
-
-Each record receives:
-- `risk_score`: numerical severity
-- `score_trace`: which rules triggered and why
-
-### ✔️ Field Correlation
-
-All relevant fields from measurements, scan cache, and provenance are merged, including:
-
-- `cdhash`, `signing_identifier`, `bundle_id`
-- `team_identifier`, `volume_uuid`, `origin_url`
-- Scan results, flags, and timestamps
-
-### ✔️ IOC Matching
-
-ExecCheck supports feeding in threat intel to scan for known indicators.
-
-#### Supported:
-- Simple list of IOCs (one per line)
-- Matches across **all fields**
-- Tracks which fields matched per record
-
-```bash
---ioc my_iocs.txt --only-ioc-matches
+## Sample Commands
 ```
+# Basic triage
+python3 -m execcheck --db /path/to/ExecPolicy --config /path/to/config.yaml --output-format table
 
-### ✔️ Output Formats
+# Filter for unsigned binaries with low/med/high score
+python3 -m execcheck --db ./ExecPolicy --config /path/to/config.yaml --output-format table [all|low|med|high]
 
-ExecCheck supports:
+# Save output to CSV, JSON, NDJSON
+python3 -m execcheck --db ./ExecPolicy --config /path/to/config.yaml --output-format csv/json/ndjson --output-path /path/to/destination
 
-- Terminal table view
-- CSV
-- JSON
-- NDJSON (newline-delimited JSON for SIEMs)
+# IOC matching
+python3 -m execcheck --db ./ExecPolicy --ioc /path/to/list.txt --only-ioc-matches
 
-```bash
---output-format [table|csv|json|ndjson]
+# VirusTotal hash enrichment. Requires VT API Key in config.yaml
+python3 -m execcheck --db ./ExecPolicy --vt --output-format html
 ```
-
-## 🔄 Automate Your Workflow
-
-You can integrate ExecCheck into your triage pipeline:
-
-```bash
-python3 -m execcheck \
-  --db ./ExecPolicy \
-  --config sample_config.yaml \
-  --vt \
-  --output-format json \
-  --output-path exec_results.json
-  --ioc ./ioc_hits.txt \
-  --only-ioc-matches \
-  --output-format ndjson \
-  --output-path exec_results.ndjson
-```
-
----
-
-## 📁 Sample Files
-
-- `sample_config.yaml` — scoring weights and settings
-- `ExecPolicy` DB — must be extracted from disk image or mounted target
-
