@@ -1,5 +1,7 @@
 # ExecCheck
 
+Tested on Sonoma 14.7.6
+
 **ExecCheck** is a macOS forensic analysis tool designed to parse, score, correlate, and triage data from the `ExecPolicy` database (`/var/db/SystemPolicyConfiguration/ExecPolicy`). It enables security teams and investigators to extract actionable intelligence from Gatekeeper and system policy telemetry.
 
 This tool is a POC intended to enable others to explore and streamline workflows.
