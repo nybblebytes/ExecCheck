@@ -1,9 +1,9 @@
 """Output helpers for printing ExecCheck results."""
 
-import json
 import csv
+import json
 import re
-from rich import print as rprint
+import sys
 from rich.table import Table
 from rich.console import Console
 from rich import box
@@ -86,26 +86,49 @@ def output_table(data: list[dict], config: dict | None = None) -> None:
     console.print(table)
 
 
-def output_json(data: list[dict], path: str) -> None:
+def output_json(data: list[dict], path: str | None) -> None:
     """Write results to ``path`` in JSON format."""
-    with open(path, "w") as f:
-        json.dump(data, f, indent=2)
+    if path:
+        with open(path, "w", encoding="utf-8") as file_handle:
+            json.dump(data, file_handle, indent=2)
+    else:
+        json.dump(data, sys.stdout, indent=2)
+        print()
 
-def output_ndjson(data: list[dict], path: str) -> None:
+def output_ndjson(data: list[dict], path: str | None) -> None:
     """Write newline-delimited JSON to ``path``."""
-    with open(path, "w", encoding="utf-8") as f:
+    if path:
+        with open(path, "w", encoding="utf-8") as file_handle:
+            for row in data:
+                file_handle.write(json.dumps(row, separators=(",", ":")) + "\n")
+    else:
         for row in data:
-            f.write(json.dumps(row, separators=(",", ":")) + "\n")
+            print(json.dumps(row, separators=(",", ":")))
 
-def output_csv(data: list[dict], path: str) -> None:
+def output_csv(data: list[dict], path: str | None) -> None:
     """Save results as a CSV file."""
     if not data:
         print("No data to write.")
         return
 
     all_keys = set().union(*[row.keys() for row in data])
-    ordered_keys = [col for col in column_order if col in all_keys] + [k for k in all_keys if k not in column_order]
-    with open(path, "w", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=ordered_keys, extrasaction="ignore")
+    ordered_keys = [col for col in column_order if col in all_keys] + sorted(
+        key for key in all_keys if key not in column_order
+    )
+    serialised = [
+        {
+            key: json.dumps(value, separators=(",", ":"), sort_keys=True)
+            if isinstance(value, (dict, list))
+            else value
+            for key, value in row.items()
+        }
+        for row in data
+    ]
+    file_handle = open(path, "w", newline="", encoding="utf-8") if path else sys.stdout
+    try:
+        writer = csv.DictWriter(file_handle, fieldnames=ordered_keys, extrasaction="ignore")
         writer.writeheader()
-        writer.writerows(data)
+        writer.writerows(serialised)
+    finally:
+        if path:
+            file_handle.close()

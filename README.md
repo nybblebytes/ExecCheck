@@ -1,110 +1,174 @@
 # ExecCheck
 
-Tested on Sonoma 14.7.6
+ExecCheck is an offline macOS forensic triage tool for the Gatekeeper/System
+Policy `ExecPolicy` SQLite database. It parses, correlates, scores, and exports
+evidence from:
 
-**ExecCheck** is a macOS tool designed to parse, score, correlate, and triage data from the `ExecPolicy` database (`/var/db/SystemPolicyConfiguration/ExecPolicy`). It enables security teams and investigators to extract actionable intelligence from Gatekeeper and system policy telemetry.
+- `executable_measurements_v2`
+- `policy_scan_cache`
+- `provenance_tracking`
 
-This tool is a POC intended to enable others to explore and streamline workflows.
+ExecCheck is a prioritization aid, not a malware verdict. Scores identify
+configured review signals and must be validated against the retained evidence.
 
-⚠️ Important: ExecPolicy data is protected by SIP and can not be queried live therefore ExecCheck is an offline analyzer; it can not access the db on a live system, you need to either make a copy or run it against a mounted volume. With FullDiskAccess (FDA), you can sudo cp /private/var/db/SystemPolicyConfiguration/ExecPolicy /path/to/destination/ExecPolicy* (do not forget the shm and wal) or in an enterprise scenario you can use your MDM or EDR (with proper entitlements)
+## Forensic handling
 
----
+SIP protects the live database at
+`/var/db/SystemPolicyConfiguration/ExecPolicy`. Analyze an acquired copy or a
+mounted volume, and acquire `ExecPolicy-wal` and `ExecPolicy-shm` with the main
+database when they exist. ExecCheck copies the supplied database and companion
+files to a temporary analysis snapshot before opening SQLite, preventing SQLite
+from creating or updating sidecars beside the source artifact.
 
-## Tool Overview
+ExecCheck follows these evidence rules:
 
-**ExecCheck** helps investigators and enterprise defenders:
+- `UNKNOWN` is distinct from observed `False`.
+- A missing source row is an evidence gap, not negative evidence.
+- Values observed in scan or provenance tables remain available even when no
+  executable-measurement row exists.
+- Quarantine/Gatekeeper processing, alerts, user approval, and successful
+  evaluation are context; they are not independently scored as malicious.
+- Unmapped Apple enums and flag bits keep their raw numeric values and are not
+  assigned undocumented meanings.
+- Timestamp proximity is not used as evidence of identity or causation.
 
-- Investigate application and binary execution metadata
-- Detect suspicious, unsigned, or quarantined files
-- Identify binaries from unknown teams or volumes
-- Score each binary based on risk attributes (e.g., unsigned, VT flagged)
-- Cross-reference against new threat intel (IOC matching)
-- Export triage-ready results for incident response or SIEM ingestion
+## Correlation and data model
 
-**ExecCheck** automatically parses and correlates (from cdhash) records from:
+CDHash is the primary correlation key. A row without a CDHash may join an
+existing CDHash group by `file_identifier` only when that identifier maps to one
+and only one group. Otherwise it remains a separate low-confidence fallback
+record. ExecCheck does not correlate records by similar timestamps.
 
-- executable_measurements_v2
-- policy_scan_cache
-- provenance_tracking
+Every combined result includes:
 
-**ExecCheck** supports:
+- `correlation`: key type, key, confidence, and contributing sources
+- `source_tables` and `source_counts`
+- `source_records`: every raw contributing row from each supported table
+- `field_provenance`: canonical field state, value sources, and sources that
+  explicitly stored null
+- `field_conflicts`: all observed values and their sources when sources disagree
+- `origin_urls` and timestamped `origin_observations`
+- `uncertainty_reasons`, `evidence_quality`, and source completeness
 
-- Risk scoring logic (customizable heuristics via yaml config file). Each record gets a risk_score (numerical severity) and score_trace (which rules and why)
-  - Unsigned status
-  - Missing or untrusted team ID
-  - Gatekeeper override flags
-  - Revoked or weak certificates
-  - Malicious VT results (optional)
-  - External volume origin
+Canonical fields have four meaningful states: observed true/value, observed
+false, unknown/not observed, and conflicting. A value present in one source is
+not erased by null or absence in another. When non-null sources conflict, the
+canonical field is null, all values are exposed in `field_conflicts`, and
+correlation confidence is downgraded.
 
-- Feeding threat intel to scan for known indicators (via --ioc ioc.txt)
-  - Simple list of IOCs (one per line)
-  - Matches across all fields
-  - Tracks which fields matched per record
+Legacy singular fields such as `origin_url`, `scan_timestamp`, and
+`correlation_type` remain for compatibility. JSON and NDJSON retain the complete
+nested evidence model. CSV stores lists and objects as JSON strings within cells.
 
-- VirusTotal hash enrichment (via --vt). Remember that what you upload is public unless you have an enterprise license.
-  - add API key to config.yaml
-  - will send all executable hashes (sha256), fetch the results and factor results as risk weights
+## Scoring
 
-- Customization through a YAML config file
-  - customize scoring based on database fields
-  - allowlist of hashes, team ids, and paths
-  - customize output filters
-  - customize color thresholds
+Default scoring is tri-state safe:
 
-- Output formats: CSV, JSON, NDJSON, rich terminal
-  - terminal table
-    - output in terminal in rich table view
-    - choose which risk category you want to view or all of them
-    - table is limited to only risk_score, score_trace (reason for risk score), file_identifier, responsible_file_identifier, and origin_url
-    - customize to your own needs
-  - csv
-    - full parsing, scoring, collated tables as csv (for humans)
-  - json
-    - full parsing, scoring, collated tables as json (for machines)
-  - ndjson
-    - full parsing, scoring, collated tables as ndjson (for SIEM)
+- `unsigned` applies only when `is_signed is False`; missing or null does not
+  score.
+- `missing_team_id` applies only to an explicitly observed null Team ID, not when
+  the necessary source was unavailable.
+- `override_blocked` requires an explicit `Override: Block` label. Numeric Apple
+  policy value `3` is not assumed to mean a block.
+- VirusTotal scoring applies only to an affirmative malicious result returned by
+  the optional enrichment; request failures and incomplete responses remain
+  unknown rather than becoming false clean results.
+- `custom_flag_mask` is empty by default. Organization-specific flag scoring is
+  opt-in and should be accompanied by an internally documented rationale.
 
-- Auto mapping to known flags and auto time conversion to human readable (iso)
+Evidence gaps appear in `uncertainty_reasons`; they do not add malicious-risk
+points.
 
----
-## Integration Use Cases
+### Allowlists
 
-**ExecCheck** is designed for flexible deployment:
-- Hunt Operations: Feed NDJSON into Splunk or Elastic with minimal parsing.
-- Threat Intel / IOC Matching: Check against known indicators during investigations (ingestion) or feeding ExecCheck's ndjson outputs to SIEM or both.
-- Incident Response: Suspicious executable.
-- Historical Analysis: Determine if an executable was presence on disk or possible executed.
+Configured hashes, Team IDs, and paths create visible `allowlist_matches`; no
+record or source evidence is deleted. Exact hash/Team-ID matching is
+case-insensitive. Paths support shell-style patterns.
 
-⚠️ Important: Always validate results using additional context—ExecCheck scores and correlations are designed to prioritize review, not replace human judgment.
+- A hash or path match suppresses `unsigned`, `missing_team_id`, and custom flag
+  heuristics.
+- A Team-ID match suppresses `missing_team_id` and custom flag heuristics.
+- Explicit block and VirusTotal malicious signals are never suppressed.
 
-## Getting Started
+Applied suppressions are listed in `allowlist_suppressed_rules`.
+
+### Output configuration
+
+`output.min_score` is enforced for table, CSV, JSON, and NDJSON. Entries in
+`output.filters` are AND-combined. A scalar requires an exact field match; a list
+accepts any listed value. Two evidence-aware aliases are supported:
+`team_id_missing` matches only an observed-null Team ID, and `blocked` matches
+only the explicit `Override: Block` label. The supplied configuration leaves
+filters empty and uses a minimum score of zero.
+
+## Requirements and installation
+
+ExecCheck requires Python 3.10 or newer. Python 3.12 is the preferred
+development/runtime version; CI tests Python 3.10, 3.11, 3.12, and 3.13 on
+macOS. Python 3.9 is not supported.
+
+Install a current Python from [python.org](https://www.python.org/downloads/),
+Homebrew, or another user-managed Python distribution. Do not modify, delete,
+or replace Apple's system Python, and do not rely on Xcode's bundled Python for
+the project environment.
+
 ```bash
-# Downloading
-git clone git@github.com/nybblebytes/ExecCheck.git
-cd /path/to/ExecCheck
-
-# Setting up enviroment using Python 3.9 to 3.11
-python3 -m venv venv
-source venv/bin/activate
-
-# Install dependencies
-pip install -r requirements.txt
+git clone https://github.com/nybblebytes/ExecCheck.git
+cd ExecCheck
+python3.12 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
 ```
-## Sample Commands
-```
-# Basic triage
-python3 -m execcheck --db /path/to/ExecPolicy --config /path/to/config.yaml --output-format table
 
-# Filter for unsigned binaries with low/med/high score
-python3 -m execcheck --db ./ExecPolicy --config /path/to/config.yaml --output-format table [all|low|med|high]
+`pyproject.toml` is the authoritative project metadata and declares
+`requires-python = ">=3.10"`. Runtime dependencies use bounded compatibility
+ranges: minimum versions provide the APIs tested by ExecCheck and upper bounds
+prevent an unreviewed future major release. `requirements.txt` installs the
+local project and those declared dependencies, avoiding a second dependency
+list that can drift.
 
-# Save output to CSV, JSON, NDJSON
-python3 -m execcheck --db ./ExecPolicy --config /path/to/config.yaml --output-format csv/json/ndjson --output-path /path/to/destination
+The package also checks the interpreter at startup. Running directly from a
+source tree on an unsupported interpreter produces a clear version error rather
+than failing later while evaluating type annotations.
+
+## Usage
+
+```bash
+# Terminal triage
+python -m execcheck --db /path/to/ExecPolicy --config sample_config.yaml --output-format table
+
+# Table risk bands
+python -m execcheck --db /path/to/ExecPolicy --config sample_config.yaml --output-format table high
+
+# Structured export
+python -m execcheck --db /path/to/ExecPolicy --config sample_config.yaml --output-format csv --output-path ./results.csv
+python -m execcheck --db /path/to/ExecPolicy --config sample_config.yaml --output-format json --output-path ./results.json
+python -m execcheck --db /path/to/ExecPolicy --config sample_config.yaml --output-format ndjson --output-path ./results.ndjson
 
 # IOC matching
-python3 -m execcheck --db ./ExecPolicy --ioc /path/to/list.txt --only-ioc-matches
+python -m execcheck --db /path/to/ExecPolicy --config sample_config.yaml --ioc iocs.txt --only-ioc-matches
 
-# VirusTotal hash enrichment. Requires VT API Key in config.yaml
-python3 -m execcheck --db ./ExecPolicy --vt --output-format html
+# Optional VirusTotal enrichment (requires vt_api_key in the configuration)
+python -m execcheck --db /path/to/ExecPolicy --config sample_config.yaml --vt --output-format json --output-path results.json
 ```
+
+`--output-format` accepts exactly one format per invocation. `--output-path`
+expects a file path, not a directory. Without it, CSV, JSON, and NDJSON are
+written to stdout. VirusTotal hash submissions may become public unless your
+license provides private submission; review that exposure before enabling
+`--vt`.
+
+## Tests
+
+```bash
+python -m pip install -r requirements-dev.txt
+python -m pytest -q
+
+# Optional integration test against an acquired database
+EXECCHECK_REGRESSION_DB=/path/to/ExecPolicy python -m pytest -q tests/test_real_execpolicy.py
+```
+
+Unknown Apple values intentionally remain unmapped until a reliable source is
+available. Preserve their raw codes when sharing results so future research can
+reinterpret the original evidence.

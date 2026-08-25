@@ -1,0 +1,14 @@
+include LICENSE
+include README.md
+include sample_config.yaml
+include requirements.txt
+include requirements-dev.txt
+global-exclude .DS_Store Thumbs.db pyvenv.cfg *.py[cod]
+prune venv
+prune .venv
+prune env
+prune .virtualenv
+prune execcheck/venv
+prune execcheck/.venv
+prune execcheck/env
+prune execcheck/.virtualenv

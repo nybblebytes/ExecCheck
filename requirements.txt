@@ -1,4 +1,2 @@
-pydantic
-PyYAML
-requests
-rich
+# Install ExecCheck and the bounded runtime dependencies declared in pyproject.toml.
+.

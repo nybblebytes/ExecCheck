@@ -1,54 +1,76 @@
-"""Utility functions to translate numeric codes into human labels."""
+"""Lossless translations of documented ExecPolicy numeric values."""
+
+from __future__ import annotations
 
 
-def translate_malware_result(val: int) -> str:
-    """Return a human readable label for a malware result code."""
-    mapping = {
-        0: "Not Malware",
-        3: "Allow listed",
-        4: "Weak Signature",
-        8: "Bad Signature",
-        10: "Revoked",
-        11: "Known Malware",
-        12: "Unnotarized Dev ID",
-        13: "PUP",
-    }
-    return mapping.get(val, "Unknown")
+MALWARE_RESULTS = {
+    0: "Not Malware",
+    3: "Allow listed",
+    4: "Weak Signature",
+    8: "Bad Signature",
+    10: "Revoked",
+    11: "Known Malware",
+    12: "Unnotarized Dev ID",
+    13: "PUP",
+}
 
-def translate_policy_match(val: int) -> str:
-    """Return a label for a policy match value."""
-    mapping = {
-        0: "No Match",
-        1: "Allow",
-        2: "Deny",
-        3: "Override",
-        4: "Quarantine",
-        5: "Translocation",
-        6: "Developer ID Match",
-    }
-    return mapping.get(val, "Unmapped")
+POLICY_MATCHES = {
+    0: "No Match",
+    1: "Allow",
+    2: "Deny",
+    3: "Override",
+    4: "Quarantine",
+    5: "Translocation",
+    6: "Developer ID Match",
+}
 
-def decode_flags(flag_value: int | None) -> list[str] | str:
-    """Decode bitmask ``flag_value`` into a list of flag names."""
+KNOWN_FLAGS = {
+    0x002: "Alert Shown",
+    0x004: "User Approved",
+    0x008: "User Override",
+    0x010: "Package",
+    0x040: "Developer Override",
+    0x080: "User Intent",
+    0x200: "Successful Evaluation",
+    0x400: "Blocked Override",
+}
+
+
+def translate_malware_result(val: int | None) -> str:
+    """Translate known values and retain every unknown raw numeric code."""
+    if val is None:
+        return "Unknown (not observed)"
+    return MALWARE_RESULTS.get(val, f"Unmapped (code={val})")
+
+
+def translate_policy_match(val: int | None) -> str:
+    """Translate known values and retain every unknown raw numeric code."""
+    if val is None:
+        return "Unknown (not observed)"
+    return POLICY_MATCHES.get(val, f"Unmapped (code={val})")
+
+
+def decode_flags(flag_value: int | None) -> dict:
+    """Return known meanings plus raw value and all unmapped bits."""
     if flag_value is None:
-        return "missing"
-    if flag_value == 0:
-        return "no flags"
-    flags = []
-    if flag_value & 0x002:
-        flags.append("Alert Shown")
-    if flag_value & 0x004:
-        flags.append("User Approved")
-    if flag_value & 0x008:
-        flags.append("User Override")
-    if flag_value & 0x010:
-        flags.append("Package")
-    if flag_value & 0x040:
-        flags.append("Developer Override")
-    if flag_value & 0x80:
-        flags.append("User Intent")
-    if flag_value & 0x200:
-        flags.append("Successful Evaluation")
-    if flag_value & 0x400:
-        flags.append("Blocked Override")
-    return flags
+        return {
+            "raw_value": None,
+            "raw_hex": None,
+            "known_flags": [],
+            "unknown_flag_mask": None,
+            "unknown_flag_mask_hex": None,
+            "state": "unknown",
+        }
+    known_flags = [label for mask, label in KNOWN_FLAGS.items() if flag_value & mask]
+    known_mask = 0
+    for mask in KNOWN_FLAGS:
+        known_mask |= mask
+    unknown_mask = flag_value & ~known_mask
+    return {
+        "raw_value": flag_value,
+        "raw_hex": hex(flag_value),
+        "known_flags": known_flags,
+        "unknown_flag_mask": unknown_mask,
+        "unknown_flag_mask_hex": hex(unknown_mask),
+        "state": "observed",
+    }
