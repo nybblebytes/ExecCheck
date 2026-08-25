@@ -6,13 +6,13 @@ dist/
 build/
 
 # Virtual Environments
-venv/
-.venv/
-env/
-.virtualenv/
+**/venv/
+**/.venv/
+**/env/
+**/.virtualenv/
 
 # OS generated files
-.DS_Store
+**/.DS_Store
 Thumbs.db
 
 # Logs and debug files

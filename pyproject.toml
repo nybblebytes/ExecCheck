@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=77,<82", "wheel>=0.42,<1"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "execcheck"
+version = "0.1.0"
+description = "Offline, source-aware forensic triage for macOS ExecPolicy databases"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
+dependencies = [
+    "pydantic>=2.7,<3",
+    "PyYAML>=6.0,<7",
+    "requests>=2.31,<3",
+    "rich>=13.7,<16",
+]
+
+[project.scripts]
+execcheck = "execcheck.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["execcheck*"]
+exclude = [
+    "execcheck.venv*",
+    "execcheck.env*",
+    "execcheck._virtualenv*",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

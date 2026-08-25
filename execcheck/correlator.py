@@ -1,36 +1,29 @@
-"""Correlation helpers for scan and provenance tables."""
+"""Raw scan/provenance indexes for callers that do not need combined rows."""
 
-import sqlite3
+from collections import defaultdict
+
+from .combine import _connect_read_only, _load_table
 
 
 def correlate_exec_data(db_path: str) -> tuple[dict, dict]:
-    """Return scan and provenance data indexed by cdhash."""
+    """Return all scan and provenance rows indexed by normalized CDHash.
 
-    conn = sqlite3.connect(db_path)
-    cursor = conn.cursor()
+    No timestamp correlation is attempted, and repeated source observations are
+    retained.  Rows without a CDHash remain available through the richer
+    :func:`execcheck.combine.combine_exec_policy_tables` API.
+    """
+    with _connect_read_only(db_path) as conn:
+        scan_rows = _load_table(conn, "policy_scan_cache")
+        provenance_rows = _load_table(conn, "provenance_tracking")
 
-    scan_data = {}
-    prov_data = {}
-
-    try:
-        cursor.execute("SELECT cdhash, file_identifier, bundle_id, flags, policy_match, top_policy_match, malware_result, volume_uuid, timestamp, revocation_check_time, mod_time FROM policy_scan_cache")
-        for row in cursor.fetchall():
-            record = dict(zip([col[0] for col in cursor.description], row))
-            key_cdhash = (record.get("cdhash") or "").strip().lower()
-            if key_cdhash:
-                scan_data.setdefault(key_cdhash, []).append(record)
-    except sqlite3.OperationalError:
-        pass
-
-    try:
-        cursor.execute("SELECT cdhash, file_identifier, bundle_id, flags, url, timestamp FROM provenance_tracking")
-        for row in cursor.fetchall():
-            record = dict(zip([col[0] for col in cursor.description], row))
-            key_cdhash = (record.get("cdhash") or "").strip().lower()
-            if key_cdhash:
-                prov_data.setdefault(key_cdhash, []).append(record)
-    except sqlite3.OperationalError:
-        pass
-
-    conn.close()
-    return scan_data, prov_data
+    scan_data = defaultdict(list)
+    provenance_data = defaultdict(list)
+    for row in scan_rows:
+        cdhash = str(row.get("cdhash") or "").strip().lower()
+        if cdhash:
+            scan_data[cdhash].append(row)
+    for row in provenance_rows:
+        cdhash = str(row.get("cdhash") or "").strip().lower()
+        if cdhash:
+            provenance_data[cdhash].append(row)
+    return dict(scan_data), dict(provenance_data)

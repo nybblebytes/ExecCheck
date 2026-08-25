@@ -6,9 +6,9 @@ scoring:
   missing_team_id: 3             # Score if team_id is missing
   override_blocked: 7            # Score if explicitly blocked by override policy
   vt_malicious: 10               # Score if VirusTotal classifies as malicious
-  custom_flag_mask:
-    0x2000: 4                    # Custom score for specific scan flags
-    0x800: 2
+  # Unknown/undocumented Apple flag bits are context, not risk by default.
+  # Add organization-specific masks only with a researched rationale.
+  custom_flag_mask: {}
 
 whitelist:
   hashes: []                     # List of known-safe cdhashes
@@ -16,10 +16,10 @@ whitelist:
   paths: []                      # File paths considered safe
 
 output:
-  min_score: 5                   # Minimum score for display/export
-  filters:
-    team_id_missing: true        # Include if missing team_id
-    blocked: true                # Include if explicitly blocked
+  min_score: 0                   # Minimum score for every output format
+  # Filters are AND-combined exact matches (or lists of accepted values).
+  # Special filters `team_id_missing` and `blocked` require affirmative evidence.
+  filters: {}
 
 color_thresholds:
   yellow: 5                      # Risk scores ≥ 5 display in yellow
